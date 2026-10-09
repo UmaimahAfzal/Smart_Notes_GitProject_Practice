@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const summarizeNote = require("./summarizer");
 
 const app = express();
 const PORT = 5000;
@@ -24,7 +25,7 @@ app.get("/notes", (req, res) => {
 app.post("/notes", (req, res) => {
   const { title, content } = req.body;
 
-  if (!content || !content.trim()) {
+  if (typeof content !== "string" || !content.trim()) {
     return res.status(400).json({
       error: "Note content is required."
     });
@@ -32,13 +33,32 @@ app.post("/notes", (req, res) => {
 
   const note = {
     id: Date.now(),
-    title: title || "Untitled Note",
-    content
+    title: typeof title === "string" && title.trim()
+      ? title.trim()
+      : "Untitled Note",
+    content: content.trim()
   };
 
   notes.push(note);
 
   res.status(201).json(note);
+});
+
+// Summarize a saved note
+app.post("/notes/:id/summarize", (req, res) => {
+  const noteId = Number(req.params.id);
+
+  const note = notes.find((item) => item.id === noteId);
+
+  if (!note) {
+    return res.status(404).json({
+      error: "Note not found."
+    });
+  }
+
+  const summary = summarizeNote(note.content);
+
+  res.json({ summary });
 });
 
 // Start the server
